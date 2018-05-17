@@ -229,18 +229,20 @@ if __name__ == '__main__':
 
     all_dhs = read_dhs_file(args.file_dnase)
 
-    if args.with_promoter:
-        print("avec le prom c'est plus dur")
-
     to_compute = []
-    for i in range(len(all_dhs)-1):
-        right_border = i+1
-        while all_dhs[i].within_neighbourhood(all_dhs[right_border].interval,args.distance):
-            right_border += 1
-            if right_border == len(all_dhs):
-                break
-        to_compute.append([i,right_border-1]) #For each peak, we compute
-        #correlation with all the peaks in this window.
+    if args.with_promoter:
+        print("Avec le promoteur c'est plus dur, option a venir")
+    else:
+        for i in range(len(all_dhs)-1):
+            right_border = i+1
+            while all_dhs[i].within_neighbourhood(\
+                                                  all_dhs[right_border].interval,\
+                                                  args.distance):
+                right_border += 1
+                if right_border == len(all_dhs):
+                    break
+            to_compute.append([i,right_border-1]) #For each peak, we compute
+            #correlation with all the peaks in this window.
 
     num_proc = 16
     (logcounts,sigma) = dhs_arraytonumpy(all_dhs)
