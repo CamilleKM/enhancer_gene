@@ -2,7 +2,7 @@
 #all DHS peak within less than 500kb.
 #Usage:
 #python alltoall_correlations.py [-p prom_file.bed] [-d 500000] DNase_DHS.bed
-#CPU = 16 by default
+#CPU = 8 by default
 
 import argparse as ap
 from math import log10
@@ -86,7 +86,7 @@ class Dhs(object): #For each DHS.
             return False
 
 
-def read_dhs_file(dhs_file):
+def read_dhs_file(dhs_file, chromosome):
     """
     Simply read the DHS file into an array of Dhs objectsfields
     """
@@ -95,11 +95,20 @@ def read_dhs_file(dhs_file):
         for line in f:
             fields = line.rstrip().split("\t")
             if fields[0] != "#chr":
-                chrom, start, end, identifier = fields[0:4]
-                start = int(start)
-                end = int(end)
-                counts = [float(c) for c in fields[4:]]
-                all_dhs.append(Dhs(chrom, start, end, identifier, counts))
+                if chromosome == "all":
+                    chrom, start, end, identifier = fields[0:4]
+                    start = int(start)
+                    end = int(end)
+                    counts = [float(c) for c in fields[4:]]
+                    all_dhs.append(Dhs(chrom, start, end, identifier, counts))
+                else:
+                    condition = "chr" + chromosome
+                    if fields[0] == condition:
+                        chrom, start, end, identifier = fields[0:4]
+                        start = int(start)
+                        end = int(end)
+                        counts = [float(c) for c in fields[4:]]
+                        all_dhs.append(Dhs(chrom, start, end, identifier, counts))
     return all_dhs
 
 
@@ -220,31 +229,31 @@ if __name__ == '__main__':
     #Input from command line.
     parser = ap.ArgumentParser()
     parser.add_argument("file_dnase", help="file with the read count per peak")
-    parser.add_argument("-p", "--with_promoter", help="if active, give a file \
-                        with the read count per peak for each promoter")
+    parser.add_argument("-c", "--chrom", help="if you want the calcul only on \
+                        one chromosome.")
     parser.add_argument("-d", "--distance", help="distance maximum between peaks\
                         to calcul the correlation. (default:500000)",
                         default=500000,type=int)
     args = parser.parse_args()
 
-    all_dhs = read_dhs_file(args.file_dnase)
+    if args.chrom:
+        all_dhs = read_dhs_file(args.file_dnase, args.chrom)
+    else:
+        all_dhs = read_dhs_file(args.file_dnase,"all")
 
     to_compute = []
-    if args.with_promoter:
-        print("Avec le promoteur c'est plus dur, option a venir")
-    else:
-        for i in range(len(all_dhs)-1):
-            right_border = i+1
-            while all_dhs[i].within_neighbourhood(\
-                                                  all_dhs[right_border].interval,\
-                                                  args.distance):
-                right_border += 1
-                if right_border == len(all_dhs):
-                    break
-            to_compute.append([i,right_border-1]) #For each peak, we compute
-            #correlation with all the peaks in this window.
+    for i in range(len(all_dhs)-1):
+        right_border = i+1
+        while all_dhs[i].within_neighbourhood(\
+                                              all_dhs[right_border].interval,\
+                                              args.distance):
+            right_border += 1
+            if right_border == len(all_dhs):
+                break
+        to_compute.append([i,right_border-1]) #For each peak, we compute
+        #correlation with all the peaks in this window.
 
-    num_proc = 16
+    num_proc = 8
     (logcounts,sigma) = dhs_arraytonumpy(all_dhs)
     output = parallel_implementation_corr(logcounts, sigma, to_compute, num_proc)
     sorted_correlations = sort_correlations(output,all_dhs)
