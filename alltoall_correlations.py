@@ -317,15 +317,19 @@ def compute_all_correlations(all_dhs, distance=500000,
 
 if __name__ == '__main__':
     # Input from command line.
-    parser = ap.ArgumentParser()
+    parser = ap.ArgumentParser(description="Compute Dnase correlations from a "
+                                            "file in bed-like format: \n "
+                                            " chr start end name val1 val2 ...\n"
+                                            "\nWarning, the file has to be sorted (using sort -k1,1 -k2,2n)",
+                               formatter_class=ap.RawTextHelpFormatter)
     parser.add_argument("file_dnase", help="file with the read count per peak")
-    parser.add_argument("-c", "--chrom", help="if you want the calcul only on \
-                        one chromosome.", default="all", type=str)
-    parser.add_argument("-d", "--distance", help="distance maximum between peaks\
-                        to calcul the correlation. (default:500000)",
+    parser.add_argument("-c", "--chrom", help="if you want the calcul only on \n"
+                        "one chromosome.", default="all", type=str)
+    parser.add_argument("-d", "--distance", help="distance maximum between peaks \n"
+                        "to compute the correlation. (default:500000)",
                         default=500000, type=int)
-    parser.add_argument("-m", "--method", help="correlation ncoefficient, \
-                        pearson or spearman. (default:pearson)",
+    parser.add_argument("-m", "--method", help="correlation ncoefficient,\n"
+                        "pearson or spearman. (default:pearson)",
                         default="pearson", type=str)
     parser.add_argument("-t", "--threads", help="number of prcessors\
                          (default:1)",
@@ -341,6 +345,7 @@ if __name__ == '__main__':
     eprint("Reading dhs file")
     all_dhs = read_dhs_file(dnase_file, chrom)
     eprint("%d peaks loaded" % (len(all_dhs)))
+
     eprint("Identifying correlation pairs to compute")
     to_compute = get_pairs_tocompare(all_dhs, distance)
 
