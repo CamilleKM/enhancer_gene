@@ -84,16 +84,24 @@ class Dhs(object): #For each DHS.
         """
         return [self.chrom,self.start,self.end]
 
-    def within_neighbourhood(self,dhs_interval,distance):
+    def within_neighbourhood(self,dhs_interval,distance, calcul_distance):
         """
         Return True if DHS interval is within 500kb of self (the promoter)
         Param dhs_interval: vector [chrom,start,end] and distance (interger)
         Return: bolean value.
         """
-        if self.chrom == dhs_interval[0] and (self.end < dhs_interval[1] and self.end+distance >= dhs_interval[1]):
-            return True
+        if calcul_distance:
+            middle1 = self.start + (self.end-self.start)/2
+            middle2 = dhs_interval[1] + (dhs_interval[2]-dhs_interval[1])/2
+            if self.chrom == dhs_interval[0] and (self.end < dhs_interval[1] and middle1+distance >= middle2):
+                return True
+            else:
+                return False
         else:
-            return False
+            if self.chrom == dhs_interval[0] and (self.end < dhs_interval[1] and self.end+distance >= dhs_interval[1]):
+                return True
+            else:
+                return False
 
 
 def read_dhs_file(dhs_file, chromosome="all"):
@@ -287,7 +295,7 @@ def sort_correlations(correlations, all_dhs):
     return results
 
 
-def get_pairs_tocompare(all_dhs, distance, method="pearson"):
+def get_pairs_tocompare(all_dhs, distance, calcul_distance, method="pearson"):
     """
     Identify the paris verifying the distance constraints hence the pairs
     for whixh a correlation will be computed
@@ -296,7 +304,7 @@ def get_pairs_tocompare(all_dhs, distance, method="pearson"):
     for i in range(len(all_dhs)-1):
         right_border = i+1
         while all_dhs[i].within_neighbourhood(all_dhs[right_border].interval,
-                                              distance):
+                                              distance, calcul_distance):
             right_border += 1
             if right_border == len(all_dhs):
                 break
@@ -306,9 +314,9 @@ def get_pairs_tocompare(all_dhs, distance, method="pearson"):
     return to_compute
 
 
-def compute_all_correlations(all_dhs, distance=500000,
+def compute_all_correlations(all_dhs, to_compute, calcul_distance, distance=500000,
                              method="pearson", threads=1):
-    to_compute = get_pairs_tocompare(all_dhs, distance, method)
+    #to_compute = get_pairs_tocompare(all_dhs, distance, calcul_distance, method)
     (logcounts, sigma, ranks) = arraytonumpy(all_dhs, method=method)
     output = parallel_implementation_corr(logcounts, sigma, ranks,
                                           to_compute, threads=threads)
@@ -328,6 +336,9 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--distance", help="distance maximum between peaks \n"
                         "to compute the correlation. (default:500000)",
                         default=500000, type=int)
+    parser.add_argument("-l", "--length", help="how to calcul the distance between \n"
+                        "two peaks, if actif distance compute between middle of \n"
+                        "each peaks. (default: start-end)", action="store_true") #nom a revoir
     parser.add_argument("-m", "--method", help="correlation ncoefficient,\n"
                         "pearson or spearman. (default:pearson)",
                         default="pearson", type=str)
@@ -341,16 +352,17 @@ if __name__ == '__main__':
     threads = args.threads
     chrom = args.chrom
     method = args.method
+    calcul_distance = args.length
 
     eprint("Reading dhs file")
     all_dhs = read_dhs_file(dnase_file, chrom)
     eprint("%d peaks loaded" % (len(all_dhs)))
 
     eprint("Identifying correlation pairs to compute")
-    to_compute = get_pairs_tocompare(all_dhs, distance)
+    to_compute = get_pairs_tocompare(all_dhs, distance, calcul_distance)
 
     eprint("Computing the correlations")
-    output = compute_all_correlations(all_dhs, distance=distance,
+    output = compute_all_correlations(all_dhs, to_compute, calcul_distance, distance=distance,
                                       method=method, threads=threads)
 
     eprint("Sorting the correlations")
