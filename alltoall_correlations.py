@@ -1,7 +1,7 @@
 #Calcul the Pearson correlation coefficient between the promoter and
 #all DHS peak within less than 500kb.
 #Usage:
-#python alltoall_correlations.py [-p prom_file.bed] [-d 500000] DNase_DHS.bed
+#python3 alltoall_correlations.py [-c 1] [-l] [-t 4] [-m] [-d 500000] DNase_DHS.bed
 #CPU = 8 by default
 
 import argparse as ap
